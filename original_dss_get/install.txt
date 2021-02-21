@@ -1,0 +1,52 @@
+Building get_dss and getdss.
+
+11-June-2013						Skip Gaede
+
+This last round of fixes to extr_fit.cpp has been done using Microsoft
+Visual Studio 6 which dates back to 1998. This choice was dictated by
+the fact that the DLL needs to be targeted for systems running Windows
+XP, which is getting more difficult as time advances.
+
+There are two deliverables from the Windows build: a console app, 
+get_dss.exe, and the dynamically loaded library, getdss.dll. The two 
+projects can be built using getdss.mak and get_dss.mak which work with
+MSVC's nmake utility. The list of compiler and linker switches are
+documented at Microsoft if you search for "Visual Studio 6" and drill 
+down to compiler and linker flags.
+
+When using the MSVC compiler in VS6, I discovered that they did not
+include stdint.h with this version. However, I did find a Microsoft-
+compatible version on the internet. There is a comment near the top
+that changes are needed if compiling C++. I discovered that I needed
+to comment out the include for <wchar.h> (wide character support). If
+you need the file, you will either need to copy it to the system include
+directory or change the code to load it from your project directory.
+In this case, one size does not fit all.
+
+One note: the Microsoft compiler in Visual Studio 6 formats numbers 
+output in scientific notation with three digit exponents. While the
+format was not cast in stone, most compilers emitted two digit exponents.
+The format looks like this:
+
+ -3.8769432E+02     (gcc and most compilera)
+ -3.8769432E+002    (Microsoft compiler)
+ 
+In 1999, the ISO Committee published the ISO 9899:1999 C Language spec-
+ification, which defines all aspects of the C Language. In the spec,
+the rule for exponents is that they will be two digits in length, unless
+the number requires more than two digits, in which case the minimum
+number of additional exponent digits shall be used. I do not know whether
+later version of the Microsoft compiler comply or not.
+
+Why do we care? This became an issue when writing the FITS header in 
+extr_fit.cpp, as the header is defined in terms of 80 character (IBM card)
+records. The old code formatted the number in a 20 character field with
+13 digits after the decimal and a two digit exponent. The code was changed
+to output 12 digits after the decimal, allowing room for the extra digit
+in the exponent field. Also, a preprocessor variable, FIX_3DIGIT_EXPS, was
+implemented make the exponent field comply with the standard, if it's
+defined when the module is compiled. 
+
+The software can be build on Windows, Macintosh, and Linux (Unix) systems.
+There are differences in the filenames used to build the console app and
+the DLL. Refer to the makefiles to use the right set for each build.

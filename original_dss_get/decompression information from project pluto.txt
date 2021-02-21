@@ -1,0 +1,96 @@
+What is GET_DSS?
+
+If you have a copy of the RealSky CDs distributed by the ASP (Astronomical Society of the Pacific), you may have noticed that one CD contains a "software" directory, with a copy of the GETIMAGE code created by STScI. This source code, for VAX machines and certain flavors of Unix, provides a way to extract images from RealSky and DSS CD-ROMs, in either FITS or GEIS formats. GET_DSS is essentially a port of certain portions of this code, with much of the code rewritten completely in order to (a) port it to ANSI C/C++; (b) separate user interface code from underlying functionality (essential to real portability); and (c) add certain capabilities that are either essential in the PC world or that are just useful to anybody, on any system.
+
+GET_DSS will work with both RealSky and DSS CDs. (The differences are that the arrangement of plates on CDs is different, and the DSS data is not as severely compressed as the RealSky data. But throughout the code and discussion, you'll see "DSS" and "RealSky" used almost interchangeably.)
+
+What OSes does it work under?
+
+The GET_DSS.ZIP file contains four makefiles: win32.mak to produce a Win32 console application, makefile.wat for WATCOM C/C++, makefile.unx for Linux and Solaris, and getdss.mak for the 32-bit Windows DLL. The first three make an example program, GET_DSS.EXE; the last produces only the .DLL.
+
+As you'll see, there is a pretty clean break between "underlying functions" and "user interface". The "underlying functions" are essentially in ANSI C.
+
+Chris Marriott has ported the code to a 32-bit Windows DLL. The file get_dss.dsp is a (Microsoft Visual C/C++) "Developer Studio Project" file required to build the DLL. Also, the files image.h and main_dll.cpp are added specifically for the .DLL code.
+
+Looking at get_dss.cpp should be sufficient to give you an idea as to how the function library is used.
+
+You could rename all .cpp files to .c without trouble; the underlying code uses no C++ specific techniques. (Both the Watcom and Microsoft compilers do some extra error checking on C++ files; that's really the main reason the code has a .cpp extension.)
+
+I suspect this code could be recompiled with any ANSI C compiler, without any real trouble. If you do this, please contact me.
+
+How does it all work?
+
+In general, you should be able to follow the example code in GET_DSS.CPP without having to concern yourself greatly with the details of how the underlying code works. I've done my best to make it possible to use it as a "black box". If you're curious, or are engaged in some project where knowledge of DSS and/or RealSky internals is important, read on.
+
+RealSky and DSS are organized as plates (of course) that were scanned in to be 14,000 by 13,999 pixels each. (One row of pixels in the final row is dropped.) These were then broken up into 500x500 pixel "tiles", with 28x28 = 784 tiles for each plate. (The missing row at the bottom of the plate creates 500x499 pixel tiles.) Each plate, such as "XX005", gets its own directory, with 784 files (one for each tile) in it.
+
+The logic to be used in extracting an image for a given area works as follows. First, figure out what plates cover that area (there is considerable overlap). The code to do this is in PLATELST.CPP; it returns an array of structures, sorted in order of preference ("best" plate first). By default, both my GET_DSS and STScI's GETIMAGE will prefer the plate that puts your desired area farthest from a plate edge. The plate edges tend to be a bit dodgy, so that's not an unreasonable idea. But there are still cases where you might want to override the selection. (In GET_DSS.CPP, you can see how the '-t' option is used to accomplish just that.)
+
+Once you've figured out what plate you're going to use (and what CD has that plate), you can then figure out what 500x500 pixel tile(s) cover your image area, and extract them from the CD to build your image. The code that figures out what tiles are needed is in GETPIECE.CPP; this code also assembles the resulting data into an output image.
+
+Actually decompressing a tile is a somewhat convoluted matter, and is the only code that remains (in admittedly severely altered form) from STScI's GETIMAGE. The data is Huffman-encoded, so the first step is to de-Huffman-encode it; that code is in QTREEDEC.CPP. The result of that decompression is not the original pixel data, though; instead, you get a set of coefficients for an H-transform, which is a close relative of the DCT (Discrete Cosine Transform) and FFT (Fast Fourier Transform). The code for reversing the H-transform is in HINV.CPP.
+
+What restrictions are there on its use?
+
+I started out to simply port STScI's GETIMAGE 2.0, and gave up in frustration. Of the original STScI files, only QTREEDEC.C, HINV.C, and DODECODE.C remain in anything resembling their original form. (Though it is not a close resemblance, simply because I had to clean up some very odd things in the original code before I got it to work at all.) You'll notice that these three files have copyright notices in them. (Do not be confused, as I was, by the fact that this software was produced under a NASA grant. This is a very odd case, in that STScI is a private non-profit organization. Under certain circumstances, and given NASA permission, it is indeed possible for them to claim a copyright on this code.)
+
+Everything else was written or rewritten by me, and can be used freely in non-commercial applications. STScI expressed some legal concerns about the remaining code, but I've been unable to get anyone to answer inquiries on the subject. That was back in 1999, and it definitely seems they have no particular interest in pursuing the issue. (They did express some reasonable concerns, but I've addressed those. What the remaining concerns are, I don't know; no one will tell me.)
+
+In the meantime, it should be noted that the copyright notices in the three files in question are mostly a matter of giving credit where credit is due. The files have been sufficiently modified that holding STScI responsible for their content, in any manner whatsoever, would not be particularly sensible, in either a technical or legal sense. Any problems with them, at this point, would really be my fault. This is expressed in suitably legal language below:
+
+The program, data, documentation, and other items and services (hereafter referred to as "products") provided with the Get_DSS source code are provided on an "as is" basis. PROJECT PLUTO AND ITS LICENSOR MAKE NO WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, REGARDING THIS PRODUCT OR ITS USE AND OPERATION FOR ANY PURPOSE. THE EXCLUSION OF IMPLIED WARRANTIES IS NOT PERMITTED IN SOME JURISDICTIONS. THE ABOVE EXCLUSION MAY NOT APPLY TO YOU.
+
+IN NO EVENT WILL PROJECT PLUTO, ITS LICENSOR, OR THEIR OFFICERS, EMPLOYEES, OR AGENTS (COLLECTIVELY, PROJECT PLUTO AND ITS LICENSOR) BE LIABLE TO YOU FOR ANY CONSEQUENTIAL, INCIDENTAL, OR INDIRECT DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE USE OF THIS SOFTWARE, EVEN IF PROJECT PLUTO OR ITS LICENSOR HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. BECAUSE SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OR LIMITATION OF LIABILITY FOR CONSEQUENTIAL DAMAGES, THE ABOVE LIMITATIONS MAY NOT APPLY TO YOU.
+
+The liability of Project Pluto or its licensor to you for actual damages from any cause whatsoever, and regardless of the form of the action (whether in contract, tort (including negligence), product liability or otherwise), will be limited to $50.
+
+How does it differ from GETIMAGE?
+Some of the original GETIMAGE functionality is omitted. You can't make GEIS files; the support for jukeboxes is gone (I'm not sure how that would work in DOS/Windows-land anyway).
+The break between user interface and underlying code should make it quite easy to link the image library into any ANSI C or C++ code.
+The code is substantially less memory-hungry than GETIMAGE. GETIMAGE allocates a monster buffer, containing the whole image, and builds it in memory. On a workstation, that's probably no big deal, and made plenty of sense. It does mean that a full plate consumes (14000^2) * (2 bytes/pixel) = 392,000,000 bytes of memory, and is not too practical.
+
+GET_DSS, on the other hand, just sets up a 500-pixel high buffer and grabs a row of chunks at a time, then writes out the results. So a full plate requires 14000 x 500 x (2 bytes/pixel) = 14 MBytes. (There's a noticeable speed improvement as a result of this, too. On some machines, the speedup is immense, because memory swapping is evaded.) The code for this is in GETPIECE.CPP; the function grab_realsky_chunk( ) in that file figures out the 500x500 chunks needed, decompresses them, and fits them into the output file (and also builds a histogram and does sampling).
+The header contains a rough histogram, useful in contrast adjustment; and it also contains the RA/dec values of the four corners of the image. With version 1.1, WCS keywords are added to the header.
+By using the subsamp parameter, you can create a sampled image that reduces the image by a factor of 2, 4, 5, 10, 20, 25, 50, 100, or 250 in both axes (these numbers are all even factors of 500). This is particularly useful in bringing larger images down to a realistic size. Running a full plate becomes quite feasible.
+Error handling and memory allocation are handled somewhat more smoothly. If the code fails, you get an error code (the possible codes are defined in ERRCODE.H).
+The DSS and RealSky CDs waste considerable room in "dead space"; on a CD-ROM, space is allocated in 2K clusters, and the RealSky CDs tend toward small files. (DSS is not quite so wasteful in this regard, at least on a percentage basis.) Copying to a hard drive, with the common 16K or 64K cluster sizes, can lead to a single CD consuming 2 GBytes of hard drive space. To evade this, GET_DSS can make use of a "RealSky Lump" (.RSL) file, where all 784 small files for a given plate are combined into one larger file, which includes an index indicating where those 784 files are stored. See MAKELUMP.CPP for the code used to create such a lump, and GETPIECE.CPP to understand how it is used; or just click here to download MAKELUMP.COM (about 11 KBytes).
+
+To use MAKELUMP, put it into your Guide directory, change to that directory, put a given RealSky or DSS disk into your CD-ROM, and run
+
+makelump d 
+
+where 'd' is the drive letter of your CD-ROM. (It may be best to first make sure you have about 660 MBytes of free space on your hard drive, of course!)
+
+Once you've "processed" a CD in this manner, you can run GET_DSS and, when prompted to insert that particular CD, you can ignore the message and just click OK.
+Similarly, GETIMAGE makes use of "header" files; you have to copy about 1300 files to your hard drive in order to make use of GETIMAGE. This is not an attractive prospect in the DOS world (or even in most OSes); for GET_DSS, all the header files are combined and compressed into two files, HHH.DAT and HH2.DAT. (The compression format of the header files is fairly trivial; the code used is in PLATELST.CPP. About all it does is to note that 90% of the bytes in each header are the same in all files, and need be stored only once.)
+
+A freeware RealSky/DSS viewer based on this code: Han Kleijn e-mailed me the following on 14 September 2001:
+
+I made a DDE controlled Realsky viewer which can be controlled from my HNSKY
+freeware planetarium program. An screenshot can be found at:
+
+www.hnsky.org/hns_real.htm. 
+
+The Delphi source and program at:
+
+www.hnsky.org/hns_real.zip 
+
+As a starting point I used an example program of Patrick. Thanks Patrick
+
+Best regards to both, Han Kleijn,
+Programmer of the free Hallo Northern Sky planetarium program
+
+("Patrick" is Patrick Chevalley, author of the "Cartes du Ciel" astronomy software.)
+
+Some notes about the Linux version: Nozomu Muto, who did the port of the Get_DSS library to Linux, noted a problem with the ISO9660 filesystem in Linux 2.2.16, while trying out DSS disks:
+
+Apparently, some top-level directories are not recognized: XE1001 on
+DISK#67, for example, while some other directories are recognized
+and accessible from unix processes. I checked a few other CDs and I
+find top-level directories are partially recognized... Fortunately,
+2.4.4's [file system] is Ok(it seems.)
+
+He also pointed out that the files all have carriage return/line feed at the end of each line. This is standard in DOS/Windows, but may cause trouble with some flavors of Unix; you may have to convert CR/LF to LF-only.
+Contact data
+
+I can be contacted at plütô at pròjéctpluto döt côm (after suitably modifying that address, of course!) 
