@@ -1,0 +1,9 @@
+; getdss.def : Declares the module parameters for the DLL.
+
+LIBRARY      "dss"
+
+EXPORTS
+    ; Explicit exports can go here
+    ImageExtract
+	GetPlateList
+	ImageExtractFromPlate
