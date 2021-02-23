@@ -1,20 +1,20 @@
 #include <stdio.h>
 #include <assert.h>
 
-#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
-      /* 10 Dec 2001:  Nozomu Muto:  supplied Unix #includes and added */
-      /* the missing strlwr() function                                 */
-    #include <ctype.h>
-    void    strlwr(char *str)
-    {       int     c;
-            while( (c = *str))
-                 *str++ = tolower(c);
-    }
-#elif defined( _WIN32) || defined( _WIN64) || defined( __WATCOMC__)
+//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
+//      /* 10 Dec 2001:  Nozomu Muto:  supplied Unix #includes and added */
+//      /* the missing strlwr() function                                 */
+//    #include <ctype.h>
+//    void    strlwr(char *str)
+//    {       int     c;
+//            while( (c = *str))
+//                 *str++ = tolower(c);
+//    }
+//#elif defined( _WIN32) || defined( _WIN64) || defined( __WATCOMC__)
    #include <conio.h>
-#else
-   #error "Unknown platform; please report so it can be fixed!"
-#endif
+//#else
+//   #error "Unknown platform; please report so it can be fixed!"
+//#endif
 
 #include <stdlib.h>
 #include <string.h>

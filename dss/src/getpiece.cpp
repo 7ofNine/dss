@@ -8,9 +8,9 @@
 #include "get_dss.h"
 #include "errcode.h"
 
-#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
-#define _CONSOLE
-#endif
+//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
+//#define _CONSOLE
+//#endif
 
 extern int hdecompress( int **a, int *nx, int *ny, int filesize,
                             char *file_buff);
@@ -248,13 +248,13 @@ int DLL_FUNC grab_realsky_chunk( const char *szDrive, const char *plate,
                const char *letters = "0123456789abcdefghijklmnopqrstuvwxyz";
                int iter;
 
-#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
-               sprintf( filename, "%s/%s/%s.%c%c", szDrive, plate, plate,
-                                 letters[ytile], letters[xtile]);
-#else   /* DOS/Windows version: */
+//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
+//               sprintf( filename, "%s/%s/%s.%c%c", szDrive, plate, plate,
+//                                 letters[ytile], letters[xtile]);
+//#else   /* DOS/Windows version: */
                sprintf( filename, "%s%s\\%s.%c%c", szDrive, plate, plate,
                                  letters[ytile], letters[xtile]);
-#endif
+//#endif
                ifile = fopen( filename, "rb");
                assert( ifile);
                for( iter = 3; iter && !ifile; iter--)

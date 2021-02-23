@@ -5,22 +5,22 @@
 #include <time.h>
 #include <string.h>
 
-#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
-#define UNIX
-#define _CONSOLE
-#include <unistd.h>            /* for unlink( ) prototype */
-#endif
+//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
+//#define UNIX
+//#define _CONSOLE
+//#include <unistd.h>            /* for unlink( ) prototype */
+//#endif
 
 #include "dss.h"
 #include "platelst.h"
 #include "get_dss.h"
 #include "errcode.h"
 
-#ifdef __WATCOMC__
-#include <dos.h>
-#include <io.h>
-#define _CONSOLE
-#endif
+//#ifdef __WATCOMC__
+//#include <dos.h>
+//#include <io.h>
+//#define _CONSOLE
+//#endif
 
 #ifndef _CONSOLE
 #include <windows.h>
@@ -85,37 +85,37 @@ void DLL_FUNC remount_drive( const char *pDrive )
 {
 #ifdef _CONSOLE
    char buff[256];
-#ifdef __WATCOMC__
-   struct _find_t c_file;
-#endif
+//#ifdef __WATCOMC__
+//   struct _find_t c_file;
+//#endif
 
    strcpy( buff, pDrive );
    strcat( buff, "*.*");
 
    dss_debug_printf( "Remount_drive: %s\n", buff);
-#ifdef __WATCOMC__
-   _dos_findfirst( buff, _A_VOLID, &c_file);
-   dss_debug_printf( "Drive remounted: %s\n", c_file.name);
-   printf( "Volume name: %s\n", c_file.name);
-#endif
+//#ifdef __WATCOMC__
+//   _dos_findfirst( buff, _A_VOLID, &c_file);
+//   dss_debug_printf( "Drive remounted: %s\n", c_file.name);
+//   printf( "Volume name: %s\n", c_file.name);
+//#endif
 #else
-#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
- char szVolumeName[_MAX_PATH];   /* volume name buffer */
- char szFileSystemName[_MAX_PATH];  /* name of file system */
- DWORD dwMaxFilename;     /* max filename length */
- DWORD dwFlags;       /* file system flags */
-
- /* Read volume info. */
-
- GetVolumeInformation( pDrive,
-                    szVolumeName,
-        _MAX_PATH,
-        NULL,
-        &dwMaxFilename,
-        &dwFlags,
-        szFileSystemName,
-        _MAX_PATH );
-#else
+//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
+// char szVolumeName[_MAX_PATH];   /* volume name buffer */
+// char szFileSystemName[_MAX_PATH];  /* name of file system */
+// DWORD dwMaxFilename;     /* max filename length */
+// DWORD dwFlags;       /* file system flags */
+//
+// /* Read volume info. */
+//
+// GetVolumeInformation( pDrive,
+//                    szVolumeName,
+//        _MAX_PATH,
+//        NULL,
+//        &dwMaxFilename,
+//        &dwFlags,
+//        szFileSystemName,
+//        _MAX_PATH );
+//#else
  char szVolumeName[_MAX_PATH];   /* volume name buffer */
  char szFileSystemName[_MAX_PATH];  /* name of file system */
  DWORD dwMaxFilename;     /* max filename length */
@@ -132,7 +132,7 @@ void DLL_FUNC remount_drive( const char *pDrive )
         szFileSystemName,
         _MAX_PATH );
 
-#endif   /* Unix/Windows */
+//#endif   /* Unix/Windows */
 #endif   /* Watcom */
 }
 
@@ -362,11 +362,11 @@ int DLL_FUNC parse_image_line( ENVIRONMENT_DATA *edata, const char *iline)
 
 
 #define N_ADDED_LINES 20
-#ifdef __WATCOMC__
-#define ZKEY_CLOCK  (*(long *)((long)0x46c))
-#else
+//#ifdef __WATCOMC__
+//#define ZKEY_CLOCK  (*(long *)((long)0x46c))
+//#else
 #define ZKEY_CLOCK  0
-#endif
+//#endif
 
 long times[20];
 

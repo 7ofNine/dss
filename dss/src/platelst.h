@@ -9,7 +9,7 @@ PLATE_DATA
    double year_imaged;
    };
 
-#ifdef _WIN32
+#ifdef _WIN32                           //%GUT ignored on x64 machines - remove
 #define DLL_FUNC __stdcall
 #else
 #define DLL_FUNC

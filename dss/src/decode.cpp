@@ -13,18 +13,18 @@ static int32_t readint32( BITFILE *bfile)
 {
    uint8_t b[4];
 
-#ifdef WRONG_WAY_BYTE_ORDER
-               /* For Suns and similar wrong-endian computers */
-    b[0] = *bfile->loc++;
-    b[1] = *bfile->loc++;
-    b[2] = *bfile->loc++;
+//#ifdef WRONG_WAY_BYTE_ORDER
+//               /* For Suns and similar wrong-endian computers */
+//    b[0] = *bfile->loc++;
+//    b[1] = *bfile->loc++;
+//    b[2] = *bfile->loc++;
+//    b[3] = *bfile->loc++;
+//#else
     b[3] = *bfile->loc++;
-#else
-    b[3] = *bfile->loc++;
     b[2] = *bfile->loc++;
     b[1] = *bfile->loc++;
     b[0] = *bfile->loc++;
-#endif
+//#endif
     return( *(int32_t *)b);
 }
 

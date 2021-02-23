@@ -1,12 +1,12 @@
 #include <stdio.h>
-#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
-   #include <ctype.h>
-   #define   getch()   getchar()
-#elif defined( _WIN32) || defined( _WIN64) || defined( __WATCOMC__)
+//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
+//   #include <ctype.h>
+//   #define   getch()   getchar()
+//#elif defined( _WIN32) || defined( _WIN64) || defined( __WATCOMC__)
    #include <conio.h>
-#else
-   #error "Unknown platform; please report so it can be fixed!"
-#endif
+//#else
+//   #error "Unknown platform; please report so it can be fixed!"
+//#endif
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -70,9 +70,9 @@ int main( int argc, char **argv)
    int ask_for_guide_cd = 1, *cd_count = NULL;
    time_t t;
 
-#ifdef __WATCOMC__
-   setvbuf( stdout, NULL, _IONBF, 0);
-#endif
+//#ifdef __WATCOMC__
+//   setvbuf( stdout, NULL, _IONBF, 0);
+//#endif
    override_plate_name[0] = '\0';
    set_debug_file( "debug.dat");
    t = time( NULL);

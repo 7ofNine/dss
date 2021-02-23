@@ -6,11 +6,11 @@ int dss_debug_printf( const char *format, ...);        /* extr_fit.cpp */
 int decode( int filesize, char *file_buff,
                              int **a, int *nx, int *ny, int *scale);
 
-#ifdef __WATCOMC__
-#define ZKEY_CLOCK  (*(long *)((long)0x46c))
-#else
+//#ifdef __WATCOMC__
+//#define ZKEY_CLOCK  (*(long *)((long)0x46c))
+//#else
 #define ZKEY_CLOCK  0
-#endif
+//#endif
 
 extern long times[];
 
@@ -58,9 +58,9 @@ void main( int argc, char **argv)
 {
    int nx, ny, *data;
 
-#ifdef __WATCOMC__
-   setvbuf( stdout, NULL, _IONBF, 0);
-#endif
+//#ifdef __WATCOMC__
+//   setvbuf( stdout, NULL, _IONBF, 0);
+//#endif
    printf( "Starting\n");
    hdecompress( &data, &nx, &ny, argv[1]);
    printf( "All done...%d x %d\n", nx, ny);

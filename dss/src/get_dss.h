@@ -30,7 +30,7 @@ ENVIRONMENT_DATA
    int add_line_to_realsky_dot_dat;
    };
 
-#ifdef _WIN32
+#ifdef _WIN32     //%GUT irrelevant for x64 is ignored
 #define DLL_FUNC __stdcall
 #else
 #define DLL_FUNC

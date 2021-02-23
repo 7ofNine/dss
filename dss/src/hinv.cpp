@@ -23,11 +23,11 @@ static void xunshuffle( int *tmp, int *a, const int nx, const int ny,
 static void yunshuffle( int *tmp, int *a, const int nx, const int ny,
                                                         const int nydim);
 
-#ifdef __WATCOMC__
-#define ZKEY_CLOCK  (*(long *)((long)0x46c))
-#else
+//#ifdef __WATCOMC__
+//#define ZKEY_CLOCK  (*(long *)((long)0x46c))
+//#else
 #define ZKEY_CLOCK  0
-#endif
+//#endif
 
 extern long times[];
 
