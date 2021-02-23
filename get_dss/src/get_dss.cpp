@@ -86,7 +86,8 @@ int main( int argc, char **argv)
       else                 /*2001-12-10mn*/
          printf( "Error in ENVIRON.DAT!  Code: %d\n", err_code);
       printf( "Hit any key:\n");
-      getch( );
+      //getch( );
+      _getch();    //%GUT
       return( -1);
       }
 
@@ -178,7 +179,8 @@ int main( int argc, char **argv)
       {
       printf( "Couldn't open IFILE!\n");
       printf( "Hit any key:\n");
-      getch( );
+      //getch( );
+      _getch();    //%GUT
       return( -2);
       }
    printf( "IFILE opened\n");
@@ -202,6 +204,11 @@ int main( int argc, char **argv)
             pdata = get_plate_list( "", edata.image_ra, edata.image_dec,
                         edata.pixels_wide, edata.pixels_high,
                         edata.plate_list_name, &n_plates);
+            //pdata = get_plate_list("J:/realsky/realskyview/HEADERS", //%GUT    The path is set to "" in the original. We set it here 
+            //    edata.image_ra, edata.image_dec,                     //%GUT    to our situation for some tests.
+            //    edata.pixels_wide, edata.pixels_high,                //%GUT    This has to be set here correctly to the local condition to work
+            //    edata.plate_list_name, &n_plates);                   //%GUT    for your installaltion. don't forget this is just a test program not the final product
+    
          if( pdata)
             {
             printf( "%s\n", edata.output_file_name);
@@ -228,7 +235,8 @@ int main( int argc, char **argv)
                {
                printf( "Which of the above plates (1-%d) \
 do you wish to use?\n", n_plates);
-               plate_to_use = getch( ) - '1';
+               //plate_to_use = getch( ) - '1';
+               plate_to_use = _getch() - '1';   //%GUT
                if( plate_to_use < 0 || plate_to_use >= n_plates)
                   plate_to_use = 0;
                }
@@ -256,7 +264,8 @@ do you wish to use?\n", n_plates);
                {
                printf( "Please insert disk %d into drive %s and hit a key:\n",
                            pdata->cd_number, edata.szDrive);
-               if( getch( ) == 27)        /* Break out of loop */
+               //if( getch( ) == 27)        /* Break out of loop */
+               if (_getch() == 27)        /* Break out of loop */ // %GUT
                   err_code = -999;
                else
                   err_code = extract_realsky_as_fits( pdata + plate_to_use, &edata);
@@ -288,7 +297,8 @@ do you wish to use?\n", n_plates);
    if( ask_for_guide_cd)
       {
       printf( "Please put the Guide CD back into the CD drive and hit a key:");
-      getch( );
+      //getch( );
+      _getch();  //%GUT
       printf( "\n");
       remount_drive( edata.szDrive);
       }
@@ -310,4 +320,4 @@ do you wish to use?\n", n_plates);
    printf( "GET_DSS done at %s\n", ctime( &t));
    set_debug_file( NULL);
    return( 0);
-}
+ }

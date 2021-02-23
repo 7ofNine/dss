@@ -2,3 +2,10 @@
 /dss/x64/*
 /makelump/x64/*
 get_dss.zip
+/dss/data/XE233/*
+/get_dss/x64
+/dss/data/debug.dat
+/dss/data/0024.fit
+/dss/data/HI_COMP.LIS
+/dss/data/realsky.dat
+/get_dss/debug.dat

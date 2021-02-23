@@ -7,3 +7,10 @@ EXPORTS
     ImageExtract
 	GetPlateList
 	ImageExtractFromPlate
+	extract_realsky_as_fits
+	parse_image_line
+	get_environment_data
+	remount_drive
+	set_debug_file
+	get_plate_list
+	median_nth_pixel

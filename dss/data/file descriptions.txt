@@ -1,0 +1,26 @@
+Description of the files used by the simple application get_dss.exe using getdss.dll for decompressing
+the real sky (or DDS) images.
+
+A "#" character at the beginning of the line indicates that this line is a comment line and is being ignored.
+
+The files are read by the software in 80 character records. the file themselves do not contain new line chracters and are organized as one single record/string of characters.
+
+The work directory in VS has to be set to the dss\data directory.
+
+debug.dat: a simple log file given more detailed messages than the plain screen output.
+environ.dat:  liost of environment variables that describe configurations of the system and location of files
+ifile: a file describing an object to be found on the scanned/compressed plates
+
+HI_COMP.LIS: a file describing the contents of the CDs. It comes from the set of CDs. We don't have a test version here. the LO_COMP.LIS is for the less compressed full DSS
+    Organization of this file (later vserions of GETIMAGE (see  https://gsss.stsci.edu/Software/Software.htm used a different format)
+     Rgn   : A region designation for the plate on the sky for each hemisphere (North and  South) starting with 1 at each pole.
+     Plate : A unqiue designation for the plate in the Digitized Sky Survey.
+     RA    : The right ascension at the center of the plate scan image.
+     DEC   : The declination at the center of the plate scan image.
+     Epoch : The epoch of the plate observation.
+     Survey: The survey from which the plate was taken:
+             UK : The SERC Southern Sky Survey and the SERC J Equatorial  extension.
+             PAL: The Palomar Sky Survey.
+             Disc  : The number of the disc of the Digitized Sky Survey which contains the compressed data for the plate.
+            
+hhh.dat : a smaller test version of the RealSky version ALL.HHH. It contains FITS headers with plate information ???            
