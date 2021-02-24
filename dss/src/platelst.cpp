@@ -167,7 +167,7 @@ int setup_header_from_text( HEADER *h, const char *header)
 /* lines (7920 bytes) for a RS South plate.                                  */
 
 
-PLATE_DATA * DLL_FUNC get_plate_list( const char *szDataDir,
+PLATE_DATA * /*DLL_FUNC*/ get_plate_list( const char *szDataDir,
           const double ra, const double dec,
           const int width, const int height,
           const char *lis_file_name, int *n_found)

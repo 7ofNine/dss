@@ -5,22 +5,10 @@
 #include <time.h>
 #include <string.h>
 
-//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
-//#define UNIX
-//#define _CONSOLE
-//#include <unistd.h>            /* for unlink( ) prototype */
-//#endif
-
 #include "dss.h"
 #include "platelst.h"
 #include "get_dss.h"
 #include "errcode.h"
-
-//#ifdef __WATCOMC__
-//#include <dos.h>
-//#include <io.h>
-//#define _CONSOLE
-//#endif
 
 #ifndef _CONSOLE
 #include <windows.h>
@@ -33,6 +21,7 @@
 
 FILE *debug_file;
 
+int dss_debug_printf(const char* format, ...);
 int setup_header_from_text( HEADER *h, const char *_header); /* platelst.c */
 
 #ifndef _CONSOLE
@@ -55,7 +44,7 @@ int dss_debug_printf( const char *format, ...)
    return( 0);
 }
 
-int DLL_FUNC set_debug_file( const char *path)
+int /*DLL_FUNC*/ set_debug_file( const char *path)
 {
    if( !path && debug_file)
       {
@@ -81,7 +70,7 @@ int DLL_FUNC set_debug_file( const char *path)
    can be either a drive letter (eg "d:\") or a network UNC name
    (eg "\\server_name\share_name\").         */
 
-void DLL_FUNC remount_drive( const char *pDrive )
+void /*DLL_FUNC*/ remount_drive( const char *pDrive )
 {
 #ifdef _CONSOLE
    char buff[256];
@@ -145,7 +134,7 @@ void DLL_FUNC remount_drive( const char *pDrive )
 /*    21 Aug 98:  BJG:  Altered to have DSS_DIR go into the (new) szDrive */
 /* field,  instead of the (old) cd_drive_letter field.                    */
 
-int DLL_FUNC get_environment_data( ENVIRONMENT_DATA *edata, const char *filename)
+int /*DLL_FUNC*/ get_environment_data( ENVIRONMENT_DATA *edata, const char *filename)
 {
    FILE *ifile = fopen( filename, "rb");
    char buff[80];
@@ -200,7 +189,7 @@ int DLL_FUNC get_environment_data( ENVIRONMENT_DATA *edata, const char *filename
    return( 0);
 }
 
-int DLL_FUNC set_environment_data( const ENVIRONMENT_DATA *edata,
+int /*DLL_FUNC*/ set_environment_data( const ENVIRONMENT_DATA *edata,
                                    const char *filename)
 {
    FILE *ofile = fopen( filename, "wb");
@@ -224,7 +213,7 @@ int DLL_FUNC set_environment_data( const ENVIRONMENT_DATA *edata,
 /*    This function follows the format used by the STScI GETIMAGE,  and     */
 /* parses the line to extract the output file name and field size.          */
 
-int DLL_FUNC create_image_line( char *oline, ENVIRONMENT_DATA *edata)
+int /*DLL_FUNC*/ create_image_line( char *oline, ENVIRONMENT_DATA *edata)
 {
    char dec_sign = '+';
    long ra = (long)( edata->image_ra * (12. / PI) * 3600. * 100.);
@@ -247,7 +236,7 @@ int DLL_FUNC create_image_line( char *oline, ENVIRONMENT_DATA *edata)
    return( 0);
 }
 
-int DLL_FUNC parse_image_line( ENVIRONMENT_DATA *edata, const char *iline)
+int /*DLL_FUNC*/ parse_image_line( ENVIRONMENT_DATA *edata, const char *iline)
 {
    double ra, ra_min, ra_sec, dec, dec_min, dec_sec, xpixel, ypixel;
    int n_bytes;
@@ -414,7 +403,7 @@ char *sptr;
 
 #endif /* FIX_3DIGIT */
 
-int DLL_FUNC extract_realsky_as_fits( const PLATE_DATA *pdata,
+int /*DLL_FUNC*/ extract_realsky_as_fits( const PLATE_DATA *pdata,
                                           const ENVIRONMENT_DATA *edata)
 {
    char szPath[256];

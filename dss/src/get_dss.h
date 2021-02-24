@@ -30,30 +30,39 @@ ENVIRONMENT_DATA
    int add_line_to_realsky_dot_dat;
    };
 
-#ifdef _WIN32     //%GUT irrelevant for x64 is ignored
-#define DLL_FUNC __stdcall
+
+#ifdef DSS_EXPORT 
+    #define DLL_INTERFACE __declspec(dllexport)
 #else
-#define DLL_FUNC
+    #define DLL_INTERFACE __declspec(dllimport)
 #endif
+
+//#ifdef _WIN32     //%GUT irrelevant for x64 is ignored
+//#define DLL_FUNC __stdcall
+//#else
+//#define DLL_FUNC
+//#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif   /* __cplusplus */
 
-int DLL_FUNC grab_realsky_chunk( const char *szDrive, const char *plate,
+DLL_INTERFACE  int grab_realsky_chunk( const char *szDrive, const char *plate,
                                const int x1, const int y1,
                                const int x2, const int y2,
                                FILE *ofile, int subsamp, long *histogram);
-int DLL_FUNC get_environment_data( ENVIRONMENT_DATA *edata,
+DLL_INTERFACE  int get_environment_data( ENVIRONMENT_DATA *edata,
                                    const char *filename);
-int DLL_FUNC set_environment_data( const ENVIRONMENT_DATA *edata,
+DLL_INTERFACE  int set_environment_data( const ENVIRONMENT_DATA *edata,
                                    const char *filename);
-int DLL_FUNC create_image_line( char *oline, ENVIRONMENT_DATA *edata);
-int DLL_FUNC parse_image_line( ENVIRONMENT_DATA *edata, const char *iline);
-void DLL_FUNC remount_drive( const char *pDrive );
-int DLL_FUNC extract_realsky_as_fits( const PLATE_DATA *pdata,
+DLL_INTERFACE  int create_image_line( char *oline, ENVIRONMENT_DATA *edata);
+DLL_INTERFACE  int parse_image_line( ENVIRONMENT_DATA *edata, const char *iline);
+DLL_INTERFACE void remount_drive( const char *pDrive );
+DLL_INTERFACE  int extract_realsky_as_fits( const PLATE_DATA *pdata,
                                           const ENVIRONMENT_DATA *edata);
-int DLL_FUNC set_debug_file( const char *path);
+DLL_INTERFACE  int set_debug_file( const char *path);
+
+
 
 #ifdef __cplusplus
 }

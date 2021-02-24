@@ -9,17 +9,24 @@ PLATE_DATA
    double year_imaged;
    };
 
-#ifdef _WIN32                           //%GUT ignored on x64 machines - remove
-#define DLL_FUNC __stdcall
+//#ifdef _WIN32                           //%GUT ignored on x64 machines - remove
+//#define DLL_FUNC __stdcall
+//#else
+//#define DLL_FUNC
+//#endif
+
+#ifdef DSS_EXPORT 
+#define DLL_INTERFACE __declspec(dllexport)
 #else
-#define DLL_FUNC
+#define DLL_INTERFACE __declspec(dllimport)
 #endif
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif      /* __cplusplus */
 
-PLATE_DATA * DLL_FUNC get_plate_list( const char *szDataDir,
+    DLL_INTERFACE PLATE_DATA * /*DLL_FUNC*/  get_plate_list( const char *szDataDir,
           const double ra, const double dec,
           const int width, const int height,
           const char *lis_file_name, int *n_found);

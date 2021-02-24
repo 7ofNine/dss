@@ -14,6 +14,13 @@
 #include "get_dss.h"
 #include "errcode.h"
 
+#ifdef DSS_EXPORT 
+#define DLL_INTERFACE __declspec(dllexport)
+#else
+#define DLL_INTERFACE __declspec(dllimport)
+#endif
+
+DLL_INTERFACE void setMedianNthPixel(int const medianPixel);  //actually defined in getpiece.cpp. Only temporary
 
 /*   The following main( ) code takes on a set of higher-level tasks.       */
 /* The idea is that it should be able to handle RealSky extraction as       */
@@ -141,10 +148,12 @@ int main( int argc, char **argv)
                break;
             case 'm':
                {
-               extern int median_nth_pixel;
+               //extern int median_nth_pixel;
 
-               median_nth_pixel = atoi( argv[i] + 2);
-               printf( "Looking for %d-th value\n", median_nth_pixel);
+               //median_nth_pixel = atoi( argv[i] + 2);
+                int medianPixel = atoi(argv[i] + 2);
+                setMedianNthPixel(medianPixel);
+               printf( "Looking for %d-th value\n", /*median_nth_pixel*/ medianPixel);
                }
                break;
             case 'n':

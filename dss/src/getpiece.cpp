@@ -12,9 +12,16 @@
 //#define _CONSOLE
 //#endif
 
+#ifdef DSS_EXPORT 
+#define DLL_INTERFACE __declspec(dllexport)
+#else
+#define DLL_INTERFACE __declspec(dllimport)
+#endif
+
 extern int hdecompress( int **a, int *nx, int *ny, int filesize,
                             char *file_buff);
 int dss_debug_printf( const char *format, ...);        /* extr_fit.cpp */
+
 
    /* The following two globals are for use in providing a 'status' */
    /* indicator for the Windows version. */
@@ -22,6 +29,18 @@ int get_dss_tiles_done, get_dss_tiles_total;
 int median_nth_pixel = -1;
 
 #define PIXEL uint16_t
+
+#ifdef DSS_EXPORT 
+#define DLL_INTERFACE __declspec(dllexport)
+#else
+#define DLL_INTERFACE __declspec(dllimport)
+#endif
+
+
+DLL_INTERFACE void setMedianNthPixel(int const x)
+{
+    median_nth_pixel = x;
+}
 
 static PIXEL find_nth_pixel( PIXEL *pixels, int n_pixels, int nth)
 {
@@ -175,7 +194,7 @@ static void subsamp_row( PIXEL *tbuff, PIXEL *curr,
 /* STScI uses sufficiently powerful machines that memory was not an issue. */
 /* But we lowly PC users must be more cautious.                            */
 
-int DLL_FUNC grab_realsky_chunk( const char *szDrive, const char *plate,
+int /*DLL_FUNC*/ grab_realsky_chunk( const char *szDrive, const char *plate,
                                const int x1, const int y1,
                                const int x2, const int y2,
                                FILE *ofile, int subsamp, long *histogram)

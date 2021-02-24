@@ -161,7 +161,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;GETDSS_EXPORTS;FIX_3DIGIT_EXPS;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_CONSOLE;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;DSS_EXPORT;FIX_3DIGIT_EXPS;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_CONSOLE;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -173,7 +173,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <ModuleDefinitionFile>$(ProjectDir)src\getdss.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>$(ProjectDir)\src\getdss.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
