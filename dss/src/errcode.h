@@ -1,3 +1,5 @@
+#pragma once
+
 #define DSS_IMG_ERR_BAD_TILE          -1
 #define DSS_IMG_ERR_ALLOC_TILE        -2
 #define DSS_IMG_ERR_NO_EOF            -3

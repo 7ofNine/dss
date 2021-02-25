@@ -1,3 +1,5 @@
+#pragma once
+
 #define PLATE_DATA struct plate_data
 
 PLATE_DATA

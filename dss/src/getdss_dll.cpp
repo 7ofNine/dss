@@ -113,161 +113,176 @@ extern "C" int ImageExtract( SImageConfig *pConfig )
    int i;                           /* loop counter                         */
    int rval = DSS_IMG_ERR_USER_CANCEL;      /* return value                 */
    PLATE_DATA *pdata;
-   int n_plates, plate_to_use = 0;
+   int n_plates;
    char override_plate_name[40];
-   int debug_level = 0, select_plate = 0;
    time_t t;
    char szTemp[64];                  /* text buffer                         */
    ENVIRONMENT_DATA edata;               /* configuration psrameters        */
 
    /* Create a debugging file to log progress and errors to.                */
 
-   debug_file = fopen( "debug.dat", "wt");
-   setvbuf( debug_file, NULL, _IONBF, 0);
-
-   t = time( NULL);
-   fprintf( debug_file, "GETIMAGE:  compiled %s %s\n", __DATE__, __TIME__);
-   fprintf( debug_file, "Starting run at %s\n", ctime( &t));
-
-   /*
-   ** Extract the data from the parameter block passed from
-   ** the calling application.
-   */
-
-   /* Path of the directory containing RealSky auxiliary data files. */
-
-   strcpy( szRealSkyDir, pConfig->pDir );
-
-   /* Root directory of the drive from which RealSky images are to be read. */
-
-   strcpy( edata.szDrive, pConfig->pDrive );
-
-   /* Name of the image file to be created.                                 */
-
-   strcpy( edata.output_file_name, pConfig->pImageFile );
-
-   /* Plate list filename.                                                  */
-
-   switch (pConfig->nDataSource)
+   errno_t error = fopen_s(&debug_file, "debug.dat", "wt");
+   if (error == 0)
    {
-   case 1:
-      strcpy( szTemp, "hi_comn.lis");         /* RealSky North              */
-      break;
+       setvbuf(debug_file, NULL, _IONBF, 0);
 
-   case 2:
-      strcpy( szTemp, "hi_coms.lis");         /* RealSky South              */
-      break;
+       char timetext[30];
+       t = time(NULL);
+       error = ctime_s(timetext, 30, &t);
+       if (error != 0)
+       {
+           timetext[0] = '/0';
+       }
 
-   case 3:
-      strcpy( szTemp, "lo_comp.lis");         /* DSS                        */
-      break;
+       fprintf(debug_file, "GETIMAGE:  compiled %s %s\n", __DATE__, __TIME__);
+       fprintf(debug_file, "Starting run at %s\n", timetext);
 
-   case 4:
-      strcpy( szTemp, "hi_comp.lis");         /* RealSky North and South    */
-      break;
+       /*
+       ** Extract the data from the parameter block passed from
+       ** the calling application.
+       */
+
+       /* Path of the directory containing RealSky auxiliary data files. */
+
+       strcpy_s(szRealSkyDir, 260, pConfig->pDir);
+
+       /* Root directory of the drive from which RealSky images are to be read. */
+
+       strcpy_s(edata.szDrive, 256, pConfig->pDrive);
+
+       /* Name of the image file to be created.                                 */
+
+       strcpy_s(edata.output_file_name, 260, pConfig->pImageFile);
+
+       /* Plate list filename.                                                  */
+
+       switch (pConfig->nDataSource)
+       {
+       case 1:
+           strcpy_s(szTemp, "hi_comn.lis");         /* RealSky North              */
+           break;
+
+       case 2:
+           strcpy_s(szTemp, "hi_coms.lis");         /* RealSky South              */
+           break;
+
+       case 3:
+           strcpy_s(szTemp, "lo_comp.lis");         /* DSS                        */
+           break;
+
+       case 4:
+           strcpy_s(szTemp, "hi_comp.lis");         /* RealSky North and South    */
+           break;
+       }
+
+       strcpy_s(edata.plate_list_name, szRealSkyDir);
+       strcat_s(edata.plate_list_name, szTemp);
+
+       /* Subsample size.   */
+
+       edata.subsamp = pConfig->nSubSample;
+
+       /* Image centre coordinates.   */
+
+       edata.image_ra = pConfig->dRA;
+       edata.image_dec = pConfig->dDec;
+
+       /* Image size, pixels. 1 pixel = 1.7 arcsec.                   */
+
+       edata.pixels_wide = (int)(pConfig->dWidth * 60 / 1.7);
+       edata.pixels_high = (int)(pConfig->dHeight * 60 / 1.7);
+
+       /* Round off for subsampling.  In the normal case, where       */
+       /* edata->subsamp = 1, this has no effect at all.              */
+
+       edata.pixels_wide -= edata.pixels_wide % edata.subsamp;
+       edata.pixels_high -= edata.pixels_high % edata.subsamp;
+
+       /* Set the other data to default values.                       */
+
+       edata.low_contrast = 1500;
+       edata.high_contrast = 12000;
+       edata.clip_image = 0;
+
+       /* cartes du ciel         */
+       edata.add_line_to_realsky_dot_dat = 0;
+
+       override_plate_name[0] = '\0';
+
+       /* Now we have all the data, the real work starts. The first task is to */
+       /* create a sorted list of possible plates on which the image appears.  */
+       /* We prioritize the list in terms of the distance of the image from    */
+       /* the plate edge; ie, the closer the image is to the centre of the     */
+       /* plate, the better.                                                   */
+
+       pdata = get_plate_list(szRealSkyDir, edata.image_ra, edata.image_dec,
+           edata.pixels_wide, edata.pixels_high,
+           edata.plate_list_name, &n_plates);
+
+       /* If we've found at least one plate...                                 */
+
+       if (pdata != NULL)
+       {
+           /* Output the list of potential plates to the debug file.            */
+
+           for (i = 0; i < n_plates; i++)
+           {
+               sprintf_s(buff, "%7s (%s): dist %d, loc (%d, %d), CD %d\n",
+                   pdata[i].plate_name, pdata[i].gsc_plate_name,
+                   pdata[i].dist_from_edge,
+                   pdata[i].xpixel, pdata[i].ypixel,
+                   pdata[i].cd_number);
+               fprintf(debug_file, "%s", buff);
+           }
+
+           /* We always use the "best" plate; the original getimage code       */
+           /* had the option of letting the user select the plate to be used.  */
+           /* This would be a good thing to reintroduce at a later date.       */
+
+           /* Attempt to extract the image. */
+
+           hWait = LoadCursor(NULL, IDC_WAIT);
+           hOldCursor = SetCursor(hWait);
+
+           /* 1 Dec 2001:  modified so that this function */
+           /* only asks you to insert the right CD if the */
+           /* 'bPromptForDisk' boolean is TRUE.    -- BJG */
+           while ((rval = extract_realsky_as_fits(pdata, &edata)) == DSS_IMG_ERR_WRONG_CD
+               && pConfig->bPromptForDisk)
+           {
+               /*         sprintf( buff, "Please insert RealSky® CD %d\nin drive %s",   */
+               /*                pdata->cd_number, edata.szDrive);                      */
+               sprintf_s(buff, "%s %d \n%s %s",
+                   pConfig->pPrompt1,
+                   pdata->cd_number,
+                   pConfig->pPrompt2,
+                   edata.szDrive);
+               if (MessageBox(pConfig->hWnd, buff, pConfig->pAppliName, MB_ICONEXCLAMATION | MB_OKCANCEL) == IDCANCEL)
+               {
+                   rval = DSS_IMG_ERR_USER_CANCEL;
+                   break;
+               }
+
+               SetCursor(hWait);
+           }
+
+           free(pdata);
+           SetCursor(hOldCursor);
+       }
+
+       /* Close the debug file and return the result code. */
+
+       t = time(NULL);
+       error = ctime_s(timetext, 30, &t);
+       if (error != 0)
+       {
+           timetext[0] = '/0';
+       }
+
+       fprintf(debug_file, "\nEnding run at %s\n", timetext);
+       fclose(debug_file);
+
    }
-
-   strcpy( edata.plate_list_name, szRealSkyDir );
-   strcat( edata.plate_list_name, szTemp );
-
-   /* Subsample size.   */
-
-   edata.subsamp = pConfig->nSubSample;
-
-   /* Image centre coordinates.   */
-
-   edata.image_ra = pConfig->dRA;
-   edata.image_dec = pConfig->dDec;
-
-   /* Image size, pixels. 1 pixel = 1.7 arcsec.                   */
-
-   edata.pixels_wide = (int)(pConfig->dWidth*60/1.7);
-   edata.pixels_high = (int)(pConfig->dHeight*60/1.7);
-
-   /* Round off for subsampling.  In the normal case, where       */
-   /* edata->subsamp = 1, this has no effect at all.              */
-
-   edata.pixels_wide -= edata.pixels_wide % edata.subsamp;
-   edata.pixels_high -= edata.pixels_high % edata.subsamp;
-
-   /* Set the other data to default values.                       */
-
-   edata.low_contrast = 1500;
-   edata.high_contrast = 12000;
-   edata.clip_image = 0;
-
-   /* cartes du ciel         */
-   edata.add_line_to_realsky_dot_dat = 0;
-
-   override_plate_name[0] = '\0';
-
-   /* Now we have all the data, the real work starts. The first task is to */
-   /* create a sorted list of possible plates on which the image appears.  */
-   /* We prioritize the list in terms of the distance of the image from    */
-   /* the plate edge; ie, the closer the image is to the centre of the     */
-   /* plate, the better.                                                   */
-
-   pdata = get_plate_list( szRealSkyDir, edata.image_ra, edata.image_dec,
-                        edata.pixels_wide, edata.pixels_high,
-                        edata.plate_list_name, &n_plates);
-
-   /* If we've found at least one plate...                                 */
-
-   if (pdata!=NULL)
-   {
-      /* Output the list of potential plates to the debug file.            */
-
-      for (i=0; i<n_plates; i++)
-      {
-         sprintf( buff, "%7s (%s): dist %d, loc (%d, %d), CD %d\n",
-                pdata[i].plate_name, pdata[i].gsc_plate_name,
-                pdata[i].dist_from_edge,
-                pdata[i].xpixel, pdata[i].ypixel,
-                pdata[i].cd_number);
-         fprintf( debug_file, "%s", buff);
-      }
-
-      /* We always use the "best" plate; the original getimage code       */
-      /* had the option of letting the user select the plate to be used.  */
-      /* This would be a good thing to reintroduce at a later date.       */
-
-      /* Attempt to extract the image. */
-
-      hWait = LoadCursor( NULL, IDC_WAIT );
-      hOldCursor = SetCursor(hWait);
-
-                       /* 1 Dec 2001:  modified so that this function */
-                       /* only asks you to insert the right CD if the */
-                       /* 'bPromptForDisk' boolean is TRUE.    -- BJG */
-      while ((rval = extract_realsky_as_fits( pdata, &edata ))==DSS_IMG_ERR_WRONG_CD
-                        && pConfig->bPromptForDisk)
-      {
-/*         sprintf( buff, "Please insert RealSky® CD %d\nin drive %s",   */
-/*                pdata->cd_number, edata.szDrive);                      */
-         sprintf( buff, "%s %d \n%s %s",
-                  pConfig->pPrompt1,
-                  pdata->cd_number,
-                  pConfig->pPrompt2,
-                  edata.szDrive);
-         if (MessageBox( pConfig->hWnd, buff, pConfig->pAppliName, MB_ICONEXCLAMATION|MB_OKCANCEL )==IDCANCEL)
-         {
-            rval = DSS_IMG_ERR_USER_CANCEL;
-            break;
-         }
-
-         SetCursor(hWait);
-      }
-
-      free(pdata);
-      SetCursor(hOldCursor);
-   }
-
-   /* Close the debug file and return the result code. */
-
-   t = time( NULL);
-   fprintf( debug_file, "\nEnding run at %s\n", ctime( &t));
-   fclose(debug_file);
-
    return rval;
 }
 
@@ -283,11 +298,11 @@ extern "C" int GetPlateList( SImageConfig *pConfig , SPlateData *pd)
    char buff[512];                     /* temp text buffer                 */
    char szRealSkyDir[_MAX_PATH];         /* path name of RealSky directory */
    int rval = DSS_IMG_ERR_USER_CANCEL;      /* return value                */
-   int i,j;                           /* loop counter                      */
+   int i;
+   int j;                           /* loop counter                      */
    PLATE_DATA *pdata;
-   int n_plates, plate_to_use = 0;
+   int n_plates;
    char override_plate_name[40];
-   int debug_level = 0, select_plate = 0;
    time_t t;
    char szTemp[64];                  /* text buffer                      */
    ENVIRONMENT_DATA edata;               /* configuration psrameters     */
@@ -295,140 +310,153 @@ extern "C" int GetPlateList( SImageConfig *pConfig , SPlateData *pd)
 
    /* Create a debugging file to log progress and errors to. */
 
-   debug_file = fopen( "debug.dat", "wt");
-   setvbuf( debug_file, NULL, _IONBF, 0);
-
-   t = time( NULL);
-   fprintf( debug_file, "GETIMAGE:  compiled %s %s\n", __DATE__, __TIME__);
-   fprintf( debug_file, "Starting run at %s\n", ctime( &t));
-
-   /*
-   ** Extract the data from the parameter block passed from
-   ** the calling application.
-   */
-
-   /* Path of the directory containing RealSky auxiliary data files.  */
-
-   strcpy( szRealSkyDir, pConfig->pDir );
-
-   /* Root directory of the drive from which RealSky images are to be read. */
-
-   strcpy( edata.szDrive, pConfig->pDrive );
-
-   /* Name of the image file to be created.  */
-
-   strcpy( edata.output_file_name, pConfig->pImageFile );
-
-   /* Plate list filename.  */
-
-   switch (pConfig->nDataSource)
+   errno_t error = fopen_s(&debug_file, "debug.dat", "wt");
+   if (error == 0)
    {
-   case 1:
-      strcpy( szTemp, "hi_comn.lis");         /* RealSky North */
-      break;
+       setvbuf(debug_file, NULL, _IONBF, 0);
 
-   case 2:
-      strcpy( szTemp, "hi_coms.lis");         /* RealSky South */
-      break;
+       char timetext[30];
+       t = time(NULL);
+       error = ctime_s(timetext, 30, &t);
+       if (error != 0)
+       {
+           timetext[0] = '/0';
+       }
+       fprintf(debug_file, "GETIMAGE:  compiled %s %s\n", __DATE__, __TIME__);
+       fprintf(debug_file, "Starting run at %s\n", timetext);
 
-   case 3:
-      strcpy( szTemp, "lo_comp.lis");         /* DSS                     */
-      break;
+       /*
+       ** Extract the data from the parameter block passed from
+       ** the calling application.
+       */
 
-   case 4:
-      strcpy( szTemp, "hi_comp.lis");         /* RealSky North and South */
-      break;
+       /* Path of the directory containing RealSky auxiliary data files.  */
+
+       strcpy_s(szRealSkyDir, pConfig->pDir);
+
+       /* Root directory of the drive from which RealSky images are to be read. */
+
+       strcpy_s(edata.szDrive, pConfig->pDrive);
+
+       /* Name of the image file to be created.  */
+
+       strcpy_s(edata.output_file_name, pConfig->pImageFile);
+
+       /* Plate list filename.  */
+
+       switch (pConfig->nDataSource)
+       {
+       case 1:
+           strcpy_s(szTemp, "hi_comn.lis");         /* RealSky North */
+           break;
+
+       case 2:
+           strcpy_s(szTemp, "hi_coms.lis");         /* RealSky South */
+           break;
+
+       case 3:
+           strcpy_s(szTemp, "lo_comp.lis");         /* DSS                     */
+           break;
+
+       case 4:
+           strcpy_s(szTemp, "hi_comp.lis");         /* RealSky North and South */
+           break;
+       }
+
+       strcpy_s(edata.plate_list_name, szRealSkyDir);
+       strcat_s(edata.plate_list_name, szTemp);
+
+       /* Subsample size.    */
+
+       edata.subsamp = pConfig->nSubSample;
+
+       /* Image centre coordinates.  */
+
+       edata.image_ra = pConfig->dRA;
+       edata.image_dec = pConfig->dDec;
+
+       /* Image size, pixels. 1 pixel = 1.7 arcsec. */
+
+       edata.pixels_wide = (int)(pConfig->dWidth * 60 / 1.7);
+       edata.pixels_high = (int)(pConfig->dHeight * 60 / 1.7);
+
+       /* Round off for subsampling.  In the normal case, where */
+       /* edata->subsamp = 1, this has no effect at all.        */
+
+       edata.pixels_wide -= edata.pixels_wide % edata.subsamp;
+       edata.pixels_high -= edata.pixels_high % edata.subsamp;
+
+       /* Set the other data to default values.                 */
+
+       edata.low_contrast = 1500;
+       edata.high_contrast = 12000;
+       edata.clip_image = 0;
+
+       /* cartes du ciel                                        */
+       edata.add_line_to_realsky_dot_dat = 0;
+
+       override_plate_name[0] = '\0';
+
+       /* Now we have all the data, the real work starts. The first task is to */
+       /* create a sorted list of possible plates on which the image appears.  */
+       /* We prioritize the list in terms of the distance of the image from    */
+       /* the plate edge; ie, the closer the image is to the centre of the     */
+       /* plate, the better.                                                   */
+
+       pdata = get_plate_list(szRealSkyDir, edata.image_ra, edata.image_dec,
+           edata.pixels_wide, edata.pixels_high,
+           edata.plate_list_name, &n_plates);
+
+       /* If we've found at least one plate...   */
+
+       if (pdata != NULL)
+       {
+           pd->nplate = n_plates;
+           for (i = 0; (i < n_plates) & (i < MaxPlateList); i++)
+           {
+               sprintf_s(buff, "list : %7s (%s): dist %d, loc (%d, %d), CD %d\n",
+                   pdata[i].plate_name, pdata[i].gsc_plate_name,
+                   pdata[i].dist_from_edge,
+                   pdata[i].xpixel, pdata[i].ypixel,
+                   pdata[i].cd_number);
+               fprintf(debug_file, "%s", buff);
+               pd->pName[i] = pdata[i].plate_name;
+               pd->pGSCName[i] = pdata[i].gsc_plate_name;
+               pd->dist_from_edge[i] = pdata[i].dist_from_edge;
+               pd->cd_number[i] = pdata[i].cd_number;
+               pd->is_uk_survey[i] = pdata[i].is_uk_survey;
+               pd->year_imaged[i] = pdata[i].year_imaged;
+               pd->exposure[i] = 0;
+               hdrl[80] = '\0';
+               value[20] = '\0';
+               for (j = 0; j < 50; ++j)
+               {
+                   strncpy_s(hdrl, pdata[i].header_text + j * 80, 80);
+                   /*             fprintf( debug_file, "%s\n", hdrl);       */
+                   if (!strncmp(hdrl, "EXPOSURE=", 8))
+                   {
+                       strncpy_s(value, hdrl + 10, 20);
+                       fprintf(debug_file, "found exposure %s\n", value);
+                       pd->exposure[i] = atof(value);
+                   }
+               }
+
+
+           }
+           rval = 0;
+       }
+
+       /* Close the debug file and return the result code.   */
+
+       t = time(NULL);
+       error = ctime_s(timetext, 30, &t);    // actually we should use strftime instead of ctime. The c standard recommends
+       if (error != 0)
+       {
+           timetext[0] = '\0';
+       }
+       fprintf(debug_file, "\nEnding run at %s\n", timetext);
+       fclose(debug_file);
    }
-
-   strcpy( edata.plate_list_name, szRealSkyDir );
-   strcat( edata.plate_list_name, szTemp );
-
-   /* Subsample size.    */
-
-   edata.subsamp = pConfig->nSubSample;
-
-   /* Image centre coordinates.  */
-
-   edata.image_ra = pConfig->dRA;
-   edata.image_dec = pConfig->dDec;
-
-   /* Image size, pixels. 1 pixel = 1.7 arcsec. */
-
-   edata.pixels_wide = (int)(pConfig->dWidth*60/1.7);
-   edata.pixels_high = (int)(pConfig->dHeight*60/1.7);
-
-   /* Round off for subsampling.  In the normal case, where */
-   /* edata->subsamp = 1, this has no effect at all.        */
-
-   edata.pixels_wide -= edata.pixels_wide % edata.subsamp;
-   edata.pixels_high -= edata.pixels_high % edata.subsamp;
-
-   /* Set the other data to default values.                 */
-
-   edata.low_contrast = 1500;
-   edata.high_contrast = 12000;
-   edata.clip_image = 0;
-
-   /* cartes du ciel                                        */
-   edata.add_line_to_realsky_dot_dat = 0;
-
-   override_plate_name[0] = '\0';
-
-   /* Now we have all the data, the real work starts. The first task is to */
-   /* create a sorted list of possible plates on which the image appears.  */
-   /* We prioritize the list in terms of the distance of the image from    */
-   /* the plate edge; ie, the closer the image is to the centre of the     */
-   /* plate, the better.                                                   */
-
-   pdata = get_plate_list( szRealSkyDir, edata.image_ra, edata.image_dec,
-                        edata.pixels_wide, edata.pixels_high,
-                        edata.plate_list_name, &n_plates);
-
-   /* If we've found at least one plate...   */
-
-   if (pdata!=NULL)
-   {
-      pd->nplate = n_plates;
-      for (i=0; (i<n_plates)&(i<MaxPlateList); i++)
-      {
-         sprintf( buff, "list : %7s (%s): dist %d, loc (%d, %d), CD %d\n",
-                pdata[i].plate_name, pdata[i].gsc_plate_name,
-                pdata[i].dist_from_edge,
-                pdata[i].xpixel, pdata[i].ypixel,
-                pdata[i].cd_number);
-         fprintf( debug_file, "%s", buff);
-         pd->pName[i]         = pdata[i].plate_name;
-         pd->pGSCName[i]         = pdata[i].gsc_plate_name;
-         pd->dist_from_edge[i]   = pdata[i].dist_from_edge;
-         pd->cd_number[i]      = pdata[i].cd_number;
-         pd->is_uk_survey[i]      = pdata[i].is_uk_survey;
-         pd->year_imaged[i]      = pdata[i].year_imaged;
-         pd->exposure[i] = 0;
-         hdrl[80] = '\0';
-         value[20] = '\0';
-         for (j=0; (j<50); j++)
-         {
-            strncpy(hdrl,pdata[i].header_text+j*80,80);
-/*             fprintf( debug_file, "%s\n", hdrl);       */
-            if (!strncmp(hdrl,"EXPOSURE=",8))
-            {
-               strncpy(value,hdrl+10,20);
-                 fprintf( debug_file, "found exposure %s\n",value);
-               pd->exposure[i] = atof(value);
-            }
-         }
-
-
-      }
-      rval = 0;
-   }
-
-   /* Close the debug file and return the result code.   */
-
-   t = time( NULL);
-   fprintf( debug_file, "\nEnding run at %s\n", ctime( &t));
-   fclose(debug_file);
-
    return rval;
 }
 
@@ -447,62 +475,70 @@ extern "C" int ImageExtractFromPlate( SImageConfig *pConfig ,char *ReqPlateName 
    int i;                           /* loop counter                        */
    int rval = DSS_IMG_ERR_USER_CANCEL;      /* return value                */
    PLATE_DATA *pdata;
-   int n_plates, plate_to_use = 0;
+   int n_plates;
+   int plate_to_use = 0;
    char override_plate_name[40];
-   int debug_level = 0, select_plate = 0;
    time_t t;
    char szTemp[64];                  /* text buffer */
    ENVIRONMENT_DATA edata;               /* configuration parameters */
 
    /* Create a debugging file to log progress and errors to.  */
 
-   debug_file = fopen( "debug.dat", "wt");
-   setvbuf( debug_file, NULL, _IONBF, 0);
-
-   t = time( NULL);
-   fprintf( debug_file, "GETIMAGE:  compiled %s %s\n", __DATE__, __TIME__);
-   fprintf( debug_file, "Starting run at %s\n", ctime( &t));
-
-   /*
-   ** Extract the data from the parameter block passed from
-   ** the calling application.
-   */
-
-   /* Path of the directory containing RealSky auxiliary data files. */
-
-   strcpy( szRealSkyDir, pConfig->pDir );
-
-   /* Root directory of the drive from which RealSky images are to be read. */
-
-   strcpy( edata.szDrive, pConfig->pDrive );
-
-   /* Name of the image file to be created.    */
-
-   strcpy( edata.output_file_name, pConfig->pImageFile );
-
-   /* Plate list filename.  */
-
-   switch (pConfig->nDataSource)
+   errno_t  error = fopen_s(&debug_file, "debug.dat", "wt");
+   if(error == 0)
    {
-   case 1:
-      strcpy( szTemp, "hi_comn.lis");         /* RealSky North */
-      break;
+        setvbuf( debug_file, NULL, _IONBF, 0);
 
-   case 2:
-      strcpy( szTemp, "hi_coms.lis");         /* RealSky South */
-      break;
+        t = time( NULL);
+        char timetext[30];
+        error = ctime_s(timetext, 30, &t);
+        if (error != 0) {
+            timetext[0] = '\0';
+        }
 
-   case 3:
-      strcpy( szTemp, "lo_comp.lis");         /* DSS           */
-      break;
+        fprintf( debug_file, "GETIMAGE:  compiled %s %s\n", __DATE__, __TIME__);
+        fprintf( debug_file, "Starting run at %s\n", timetext);
 
-   case 4:
-      strcpy( szTemp, "hi_comp.lis");         /* RealSky North and South  */
-      break;
-   }
+        /*
+        ** Extract the data from the parameter block passed from
+        ** the calling application.
+        */
 
-   strcpy( edata.plate_list_name, szRealSkyDir );
-   strcat( edata.plate_list_name, szTemp );
+        /* Path of the directory containing RealSky auxiliary data files. */
+
+        strcpy_s( szRealSkyDir, pConfig->pDir );
+
+        /* Root directory of the drive from which RealSky images are to be read. */
+
+        strcpy_s( edata.szDrive, pConfig->pDrive );
+
+        /* Name of the image file to be created.    */
+
+        strcpy_s( edata.output_file_name, pConfig->pImageFile );
+
+        /* Plate list filename.  */
+
+        switch (pConfig->nDataSource)
+        {
+            case 1:
+            strcpy_s( szTemp, "hi_comn.lis");         /* RealSky North */
+            break;
+
+            case 2:
+            strcpy_s( szTemp, "hi_coms.lis");         /* RealSky South */
+            break;
+
+            case 3:
+            strcpy_s( szTemp, "lo_comp.lis");         /* DSS           */
+            break;
+
+            case 4:
+            strcpy_s( szTemp, "hi_comp.lis");         /* RealSky North and South  */
+            break;
+        }
+
+        strcpy_s( edata.plate_list_name, szRealSkyDir );
+        strcat_s( edata.plate_list_name, szTemp );
 
    /* Subsample size. */
 
@@ -534,7 +570,7 @@ extern "C" int ImageExtractFromPlate( SImageConfig *pConfig ,char *ReqPlateName 
    edata.add_line_to_realsky_dot_dat = 0;
 
    override_plate_name[0] = '\0';
-    strcpy( override_plate_name, ReqPlateName);
+    strcpy_s( override_plate_name, ReqPlateName);
     fprintf( debug_file, "Override plate: %s\n",
              override_plate_name);
 
@@ -557,7 +593,7 @@ extern "C" int ImageExtractFromPlate( SImageConfig *pConfig ,char *ReqPlateName 
 
       for (i=0; i<n_plates; i++)
       {
-         sprintf( buff, "%7s (%s): dist %d, loc (%d, %d), CD %d\n",
+         sprintf_s( buff, "%7s (%s): dist %d, loc (%d, %d), CD %d\n",
                 pdata[i].plate_name, pdata[i].gsc_plate_name,
                 pdata[i].dist_from_edge,
                 pdata[i].xpixel, pdata[i].ypixel,
@@ -584,7 +620,7 @@ extern "C" int ImageExtractFromPlate( SImageConfig *pConfig ,char *ReqPlateName 
       {
 /*         sprintf( buff, "Please insert RealSky® CD %d\nin drive %s",  */
 /*                pdata->cd_number, edata.szDrive);                     */
-         sprintf( buff, "%s %d \n%s %s",
+         sprintf_s( buff, "%s %d \n%s %s",
                   pConfig->pPrompt1,
                   (pdata+plate_to_use)->cd_number,
                   pConfig->pPrompt2,
@@ -603,10 +639,16 @@ extern "C" int ImageExtractFromPlate( SImageConfig *pConfig ,char *ReqPlateName 
    }
 
    /* Close the debug file and return the result code.   */
-
-   t = time( NULL);
-   fprintf( debug_file, "\nEnding run at %s\n", ctime( &t));
-   fclose(debug_file);
+   
+   
+        t = time( NULL);
+        error = ctime_s(timetext, 30, &t);
+        if (error!=0) {
+            timetext[0] = '\0';
+        }
+        fprintf( debug_file, "\nEnding run at %s\n", timetext);
+        fclose(debug_file);
+   }
 
    return rval;
 }

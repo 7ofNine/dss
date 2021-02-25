@@ -1,3 +1,5 @@
+#pragma once
+
 #define ENVIRONMENT_DATA struct environment_data
 
 /*

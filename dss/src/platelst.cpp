@@ -1,29 +1,14 @@
 #include <stdio.h>
 #include <assert.h>
-
-//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
-//      /* 10 Dec 2001:  Nozomu Muto:  supplied Unix #includes and added */
-//      /* the missing strlwr() function                                 */
-//    #include <ctype.h>
-//    void    strlwr(char *str)
-//    {       int     c;
-//            while( (c = *str))
-//                 *str++ = tolower(c);
-//    }
-//#elif defined( _WIN32) || defined( _WIN64) || defined( __WATCOMC__)
-   #include <conio.h>
-//#else
-//   #error "Unknown platform; please report so it can be fixed!"
-//#endif
-
+#include <conio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 #include "dss.h"
 #include "platelst.h"
 
-#define PI 3.141592653589793238462643383279502884197169399375
-
+ 
 int dss_debug_printf( const char *format, ...);        /* extr_fit.cpp */
 
 /* GETIMAGE as distributed by STScI uses a more complicated form of       */
@@ -56,15 +41,17 @@ static int get_hhh_data( const char *szDataDir, const char *header_file_name,
 {
    char szPath[260];
    size_t n_read;
-   FILE *ifile;
-   unsigned i, n_lines = 0;
+   FILE *ifile = NULL;
+   unsigned i;
+   unsigned n_lines = 0;
    long offset;
-   char lower_name[20], filename[20];
+   char lower_name[20];
+   char filename[20];
 
-   strcpy( filename, "hhh.dat");
-   strcpy( lower_name, header_file_name);
+   strcpy_s( filename, 20, "hhh.dat");
+   strcpy_s( lower_name, 20, header_file_name);
    //strlwr( lower_name);
-   _strlwr(lower_name); //%GUT
+   _strlwr_s(lower_name); //%GUT
    if( ((lower_name[0] == 's' || lower_name[1] == 'v') &&
                      strcmp( lower_name, "xx005")) ||
                      !strcmp( lower_name, "xx001") ||
@@ -90,12 +77,12 @@ static int get_hhh_data( const char *szDataDir, const char *header_file_name,
 
    /* Get the full pathname of the data file. */
 
-   strcpy( szPath, szDataDir );
-   strcat( szPath, filename );
+   strcpy_s( szPath, 260, szDataDir );
+   strcat_s( szPath, 260, filename );
 
-   ifile = fopen( szPath, "rb");
+   errno_t const error = fopen_s(&ifile, szPath, "rb");
 
-   if ( !ifile)
+   if ( error != 0)
       {
       dss_debug_printf( "   COULDN'T OPEN %s\n", filename);
       return( -1);
@@ -124,7 +111,7 @@ static int get_hhh_data( const char *szDataDir, const char *header_file_name,
 
    if( !strcmp( lower_name, "xe524"))
       {
-      strcpy( hdr + n_lines * 80, "END");
+      strcpy_s( hdr + n_lines * 80, 1500, "END");  // totally unspecified length just a number taken.
       memset( hdr + n_lines * 80 + 3, ' ', 77);
       n_lines++;
       }
@@ -147,7 +134,7 @@ int setup_header_from_text( HEADER *h, const char *header)
    return( h->n_lines);
 }
 
-#define POSSIBLE_PLATE_DIST (7. * PI / 180.)
+#define POSSIBLE_PLATE_DIST (7. * M_PI / 180.)
 
 /* I borrowed some strategy from the STScI GETIMAGE for this find_best_plate */
 /* function.  It reads through the .LIS file (list of plates) and            */
@@ -167,20 +154,21 @@ int setup_header_from_text( HEADER *h, const char *header)
 /* lines (7920 bytes) for a RS South plate.                                  */
 
 
-PLATE_DATA * /*DLL_FUNC*/ get_plate_list( const char *szDataDir,
+PLATE_DATA * get_plate_list( const char *szDataDir,
           const double ra, const double dec,
           const int width, const int height,
           const char *lis_file_name, int *n_found)
 {
    char buff[81], *header;
-   FILE *ifile = fopen( lis_file_name, "rb");
+   FILE* ifile = NULL;
+   errno_t const error = fopen_s(&ifile, lis_file_name, "rb");
    PLATE_DATA *rval = NULL;
    int i, j;
 
    *n_found = 0;
    dss_debug_printf( "Hunting plate: RA %lf, dec %lf\n",
-                         ra * 180. / PI, dec * 180. / PI);
-   if( !ifile)
+                         ra * 180. / M_PI, dec * 180. / M_PI);
+   if( error != 0)
       return( NULL);
 
    header = (char *)calloc( 100, 80);
@@ -204,19 +192,19 @@ PLATE_DATA * /*DLL_FUNC*/ get_plate_list( const char *szDataDir,
          if( buff[25] == '-')
             dec1 = -dec1;
 
-         ra1 *= PI / 12.;
-         dec1 *= PI / 180.;
+         ra1 *= M_PI / 12.;
+         dec1 *= M_PI / 180.;
          dist = sin( dec1) * sin( dec) +
                               cos( dec1) * cos( dec) * cos( ra1 - ra);
          dist = acos( dist);
-         sscanf(buff,"%[^ ]", plate_name);
+         sscanf_s(buff,"%[^ ]", plate_name, 10);
          //strlwr( plate_name);                   /* 10 Dec 2001:  BJG */
-         _strlwr(plate_name);                   // %GUT
+         _strlwr_s(plate_name);                   // %GUT
          if( dist < POSSIBLE_PLATE_DIST)
             {
             dss_debug_printf( "Possible: %s: RA %lf, dec %lf; dist %lf;",
                          plate_name,
-                         ra1 * 180. / PI, dec1 * 180. / PI, dist * 180. / PI);
+                         ra1 * 180. / M_PI, dec1 * 180. / M_PI, dist * 180. / M_PI);
             if( get_hhh_data( szDataDir, plate_name, header) > 0)
                {
                double x, y;
@@ -246,11 +234,11 @@ PLATE_DATA * /*DLL_FUNC*/ get_plate_list( const char *szDataDir,
                      }
                   rval = temp_pdata;
                   temp_pdata = rval + (*n_found) - 1;
-                  strcpy( temp_pdata->header_text, header);
-                  sscanf( buff, "%s %s", temp_pdata->plate_name,
-                                         temp_pdata->gsc_plate_name);
+                  strcpy_s( temp_pdata->header_text, header);
+                  sscanf_s( buff, "%s %s", temp_pdata->plate_name, 10,
+                                         temp_pdata->gsc_plate_name, 10);
                   //strlwr( temp_pdata->plate_name);   /* 10 Dec 2001:  BJG */
-                  _strlwr(temp_pdata->plate_name);   //%GUT
+                  _strlwr_s(temp_pdata->plate_name);   //%GUT
                   edge_dists[0] = min_dist = x1;
                   edge_dists[1] = 14000 - x2;
                   edge_dists[2] = y1;

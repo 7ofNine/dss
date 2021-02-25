@@ -46,7 +46,9 @@ static PIXEL find_nth_pixel( PIXEL *pixels, int n_pixels, int nth)
 {
    while( n_pixels > 1)
       {
-      int i, j = n_pixels - 1, tval;
+       int i;
+       int j = n_pixels - 1;
+       uint16_t tval;
 
       if( n_pixels > 10)
          {
@@ -194,14 +196,19 @@ static void subsamp_row( PIXEL *tbuff, PIXEL *curr,
 /* STScI uses sufficiently powerful machines that memory was not an issue. */
 /* But we lowly PC users must be more cautious.                            */
 
-int /*DLL_FUNC*/ grab_realsky_chunk( const char *szDrive, const char *plate,
-                               const int x1, const int y1,
-                               const int x2, const int y2,
-                               FILE *ofile, int subsamp, long *histogram)
+int grab_realsky_chunk( const char *szDrive, const char *plate,
+                        const int x1, const int y1,
+                        const int x2, const int y2,
+                        FILE *ofile, int const subsamp, long *histogram)
 {
-   int xsize = x2 - x1, ytile, xtile, x, y, err_code = 0;
+    int xsize = x2 - x1;
+    int ytile;
+    int xtile;
+    int x;
+    int y;
+    int err_code = 0;
    PIXEL *tbuff = (PIXEL *)calloc( xsize, 500 * sizeof( PIXEL));
-   FILE *lump_file;
+   FILE *lump_file = NULL;
    int xtile_start = x1 / 500;
    int ytile_start = y1 / 500;
    int xtile_end = (x2 + 499) / 500;
@@ -212,7 +219,8 @@ int /*DLL_FUNC*/ grab_realsky_chunk( const char *szDrive, const char *plate,
    PIXEL *median_buff = NULL;
 #ifdef _CONSOLE
    clock_t t0 = clock( );
-   double t_elapsed, prev_t_elapsed = -100;
+   double t_elapsed;
+   double prev_t_elapsed = -100;
 #endif
 
    get_dss_tiles_done = 0;            /* This is a global! */
@@ -228,13 +236,13 @@ int /*DLL_FUNC*/ grab_realsky_chunk( const char *szDrive, const char *plate,
          fwrite( tbuff, xsize / subsamp, sizeof( PIXEL), ofile);
 
                /* Try getting data from a .RSL ("RealSky Lump") file: */
-   sprintf( filename, "%s.rsl", plate);
-   lump_file = fopen( filename, "rb");
+   sprintf_s( filename, "%s.rsl", plate);
+   errno_t error = fopen_s(&lump_file, filename, "rb");
    /* also try to find the .RSL to the szDrive path */
-   if( !lump_file)
+   if(error != 0)
      {
-     sprintf( filename, "%s%s.rsl", szDrive, plate);
-     lump_file = fopen( filename, "rb");
+     sprintf_s( filename, "%s%s.rsl", szDrive, plate);
+     error = fopen_s(&lump_file, filename, "rb");
      }
 
    for( ytile = ytile_start; !err_code && ytile < ytile_end; ytile++)
@@ -267,14 +275,10 @@ int /*DLL_FUNC*/ grab_realsky_chunk( const char *szDrive, const char *plate,
                const char *letters = "0123456789abcdefghijklmnopqrstuvwxyz";
                int iter;
 
-//#if defined( __linux__) || defined( __unix__) || defined( __APPLE__)
-//               sprintf( filename, "%s/%s/%s.%c%c", szDrive, plate, plate,
-//                                 letters[ytile], letters[xtile]);
-//#else   /* DOS/Windows version: */
-               sprintf( filename, "%s%s\\%s.%c%c", szDrive, plate, plate,
+               sprintf_s( filename, "%s%s\\%s.%c%c", szDrive, plate, plate,
                                  letters[ytile], letters[xtile]);
-//#endif
-               ifile = fopen( filename, "rb");
+
+               error = fopen_s(&ifile, filename, "rb");
                assert( ifile);
                for( iter = 3; iter && !ifile; iter--)
                   {
@@ -283,9 +287,9 @@ int /*DLL_FUNC*/ grab_realsky_chunk( const char *szDrive, const char *plate,
                   printf( "Failed on %s...\n", filename);
                   while( time( NULL) < t + 5L)
                      ;
-                  ifile = fopen( filename, "rb");
+                  error = fopen_s(&ifile, filename, "rb");
                   }
-               if( !ifile)
+               if( error != 0)
                   err_code = DSS_IMG_ERR_OPEN_TILE;
                else
                   {

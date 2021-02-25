@@ -1,3 +1,4 @@
+#pragma once
 /*
 ** Image.h
 ** Header for the "GetImage" DLL to extract FITS files from RealSky.
